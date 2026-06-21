@@ -2,6 +2,7 @@ import streamlit as st
 from dotenv import load_dotenv
 import html
 import pandas as pd
+from datetime import datetime
 
 from engine_core import (
     load_csv,
@@ -337,7 +338,7 @@ with st.expander("📥 Simular dados recebidos do Instagram", expanded=False):
         )
 
         save_interaction({
-            "timestamp": str(pd.Timestamp.now()),
+            "timestamp": datetime.now().isoformat(),
             "user_input": user_input,
             "assistant_output": response["assistant_message"],
             "classification": response["classification"],

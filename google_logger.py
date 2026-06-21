@@ -27,28 +27,35 @@ def get_google_client():
 
 
 def save_interaction_to_google_sheets(payload: dict):
-    sheet_id = os.getenv("GOOGLE_SHEET_ID")
+    try:
+        sheet_id = os.getenv("GOOGLE_SHEET_ID")
 
-    if not sheet_id:
+        if not sheet_id:
+            print("GOOGLE_SHEET_ID não configurado.")
+            return
+
+        client = get_google_client()
+
+        if client is None:
+            print("Google client não inicializado.")
+            return
+
+        spreadsheet = client.open_by_key(sheet_id)
+        worksheet = spreadsheet.worksheet("raw_logs")
+
+        worksheet.append_row(
+            [
+                payload.get("timestamp", ""),
+                payload.get("source", ""),
+                payload.get("user_input", ""),
+                payload.get("assistant_output", ""),
+                payload.get("status", ""),
+                payload.get("score", ""),
+                payload.get("next_question", ""),
+            ],
+            value_input_option="USER_ENTERED"
+        )
+
+    except Exception as e:
+        print(f"Erro ao salvar no Google Sheets: {type(e).__name__}: {e}")
         return
-
-    client = get_google_client()
-
-    if client is None:
-        return
-
-    spreadsheet = client.open_by_key(sheet_id)
-    worksheet = spreadsheet.worksheet("raw_logs")
-
-    worksheet.append_row(
-        [
-            payload.get("timestamp", ""),
-            payload.get("source", ""),
-            payload.get("user_input", ""),
-            payload.get("assistant_output", ""),
-            payload.get("status", ""),
-            payload.get("score", ""),
-            payload.get("next_question", ""),
-        ],
-        value_input_option="USER_ENTERED"
-    )

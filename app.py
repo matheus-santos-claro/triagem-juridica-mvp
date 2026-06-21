@@ -339,12 +339,12 @@ with st.expander("📥 Simular dados recebidos do Instagram", expanded=False):
 
         save_interaction({
             "timestamp": datetime.now().isoformat(),
-            "user_input": user_input,
+            "source": "instagram_prefill",
+            "user_input": prefill_message,
             "assistant_output": response["assistant_message"],
             "classification": response["classification"],
             "planner": response["planner"],
-        })        
-
+        })
         st.session_state.last_response = response
 
         mensagem_visivel = (

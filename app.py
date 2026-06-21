@@ -562,6 +562,15 @@ with col_chat:
             debug=True
         )
 
+        save_interaction({
+            "timestamp": datetime.now().isoformat(),
+            "source": "chat",
+            "user_input": user_input,
+            "assistant_output": response["assistant_message"],
+            "classification": response["classification"],
+            "planner": response["planner"],
+        })
+
         state_after = st.session_state.engine.get_state()
 
         st.session_state.debug_score_after_process = (

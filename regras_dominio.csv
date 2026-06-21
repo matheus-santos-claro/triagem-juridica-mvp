@@ -1,0 +1,18 @@
+regra_id;nome_regra;tipo_regra;prioridade;condicao;score_delta;status_resultante;justificativa_template;proximo_passo_template;encerrar_fluxo;ativa
+101;desqualificacao_fora_escopo;desqualificacao;90;ANSWERED(natureza_caso) AND natureza_caso NOT IN [acidente_trabalho,doenca_ocupacional];;desqualificado;O caso nao se enquadra em acidente ou doenca ocupacional.;Encerrar atendimento.;VERDADEIRO;VERDADEIRO
+103;desqualificacao_sem_nexo;desqualificacao;95;ANSWERED(nexo_trabalho) AND nexo_trabalho=nao;;desqualificado;O caso informado não apresenta relação com o trabalho.;Encerrar atendimento.;VERDADEIRO;VERDADEIRO
+104;desqualificacao_fora_escopo_previdenciario;desqualificacao;100;natureza_caso=fora_escopo;0;desqualificado;O tema informado parece estar fora do foco desta triagem, que atende acidente de trabalho e doença ocupacional.;Encerrar triagem ou direcionar para atendimento previdenciário adequado.;VERDADEIRO;VERDADEIRO
+201;score_sequela_grave;score;50;houve_sequela=sim AND reducao_capacidade=sim;50;;Identificamos sequelas com reducao de capacidade laboral.;Seguir para analise de documentos.;FALSO;VERDADEIRO
+202;score_acidente_trabalho;score;50;natureza_caso=acidente_trabalho;20;;Acidente de trabalho identificado.;Seguir para detalhes do evento.;FALSO;VERDADEIRO
+203;score_doenca_ocupacional;score;50;natureza_caso=doenca_ocupacional;15;;Doenca ocupacional identificada.;Seguir para detalhes do evento.;FALSO;VERDADEIRO
+204;score_vinculo_clt;score;50;tipo_vinculo=clt;10;;Vinculo CLT identificado.;Seguir para analise.;FALSO;VERDADEIRO
+205;score_cirurgia;score;50;houve_cirurgia=sim;15;;Cirurgia realizada aumenta a gravidade do caso.;Seguir para analise.;FALSO;VERDADEIRO
+206;score_nexo_positivo;score;50;nexo_trabalho=sim;10;;Nexo causal confirmado.;Seguir para analise.;FALSO;VERDADEIRO
+301;negativo_nexo_incerto;score;40;nexo_trabalho=nao_sabe;-20;;O nexo causal com o trabalho ainda esta incerto.;Precisamos esclarecer o nexo.;FALSO;VERDADEIRO
+302;negativo_desemprego_longo;score;40;tempo_desempregado=mais_12_meses;-30;;O tempo de desemprego pode dificultar a acao.;Seguir para analise.;FALSO;VERDADEIRO
+303;negativo_pendencia_critica;score;40;PENDING_CONFIRMATION(descricao_caso);-10;;Existem informacoes pendentes de confirmacao.;Por favor confirme os dados.;FALSO;VERDADEIRO
+304;negativo_inconsistencia;score;40;INCONSISTENT(data_evento);-20;;Detectamos inconsistencia na data do evento.;Por favor verifique a data.;FALSO;VERDADEIRO
+305;negativo_sem_data;score;40;ANSWERED(descricao_caso) AND EMPTY(data_evento);-5;;Data do evento nao informada.;Por favor informe a data.;FALSO;VERDADEIRO
+401;classificacao_quente;classificacao;10;SCORE_TOTAL >= 60;0;quente;Seu caso apresenta alto potencial juridico.;Agendar consulta com advogado.;FALSO;VERDADEIRO
+402;classificacao_morno;classificacao;10;SCORE_TOTAL >= 30 AND SCORE_TOTAL < 60;0;morno;Seu caso possui potencial moderado.;Aguardar analise humana.;FALSO;VERDADEIRO
+403;classificacao_frio;classificacao;10;SCORE_TOTAL < 30;0;frio;Seu caso possui baixa prioridade no momento.;Aguardar contato futuro.;FALSO;VERDADEIRO

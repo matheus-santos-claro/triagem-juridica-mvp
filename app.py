@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import html
 import pandas as pd
 from datetime import datetime
+from google_logger import save_interaction_to_google_sheets
 
 from engine_core import (
     load_csv,
@@ -337,14 +338,18 @@ with st.expander("📥 Simular dados recebidos do Instagram", expanded=False):
             debug=True
         )
 
-        save_interaction({
+        payload = {
             "timestamp": datetime.now().isoformat(),
             "source": "instagram_prefill",
             "user_input": prefill_message,
             "assistant_output": response["assistant_message"],
-            "classification": response["classification"],
-            "planner": response["planner"],
-        })
+            "status": response["classification"].get("commercial_status"),
+            "score": response["classification"].get("score_total"),
+            "next_question": response["planner"].get("next_question_text"),
+        }
+
+        save_interaction(payload)
+        save_interaction_to_google_sheets(payload)
         st.session_state.last_response = response
 
         mensagem_visivel = (
@@ -562,15 +567,18 @@ with col_chat:
             debug=True
         )
 
-        save_interaction({
+        payload = {
             "timestamp": datetime.now().isoformat(),
             "source": "chat",
             "user_input": user_input,
             "assistant_output": response["assistant_message"],
-            "classification": response["classification"],
-            "planner": response["planner"],
-        })
+            "status": response["classification"].get("commercial_status"),
+            "score": response["classification"].get("score_total"),
+            "next_question": response["planner"].get("next_question_text"),
+        }
 
+        save_interaction(payload)
+        save_interaction_to_google_sheets(payload)
         state_after = st.session_state.engine.get_state()
 
         st.session_state.debug_score_after_process = (

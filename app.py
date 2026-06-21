@@ -1,6 +1,7 @@
 import streamlit as st
 from dotenv import load_dotenv
 import html
+import pandas as pd
 
 from engine_core import (
     load_csv,

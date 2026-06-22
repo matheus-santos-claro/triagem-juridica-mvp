@@ -22,6 +22,8 @@ from cnis_service import (
     build_cnis_summary_card,
 )
 
+from logger import save_interaction
+
 from google_logger import (
     save_interaction_to_google_sheets,
     save_lead_summary_to_google_sheets,

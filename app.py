@@ -22,7 +22,10 @@ from cnis_service import (
     build_cnis_summary_card,
 )
 
-from logger import save_interaction
+from google_logger import (
+    save_interaction_to_google_sheets,
+    save_lead_summary_to_google_sheets,
+)
 
 load_dotenv()
 
@@ -170,6 +173,76 @@ st.markdown(
 schema_df = load_csv("schema_itens.csv")
 rules_df = load_csv("regras_dominio.csv")
 
+def item_value(state, slug: str, default: str = ""):
+    item = state.items.get(slug)
+
+    if item is None:
+        return default
+
+    if item.value_normalized is None:
+        return default
+
+    return str(item.value_normalized)
+
+
+def build_final_summary_text(summary: dict, cnis: dict | None = None) -> str:
+    lines = []
+
+    lines.append(f"Classificação: {summary.get('status', '')}")
+    lines.append(f"Score: {summary.get('score', '')}")
+    lines.append(f"Natureza: {summary.get('natureza_caso', '')}")
+    lines.append(f"Nexo com trabalho: {summary.get('nexo_trabalho', '')}")
+    lines.append(f"Vínculo: {summary.get('tipo_vinculo', '')}")
+    lines.append(f"Cirurgia: {summary.get('houve_cirurgia', '')}")
+    lines.append(f"Sequela: {summary.get('houve_sequela', '')}")
+    lines.append(f"Redução de capacidade: {summary.get('reducao_capacidade', '')}")
+
+    if summary.get("justificativas"):
+        lines.append("")
+        lines.append("Justificativas:")
+        for item in summary.get("justificativas", []):
+            lines.append(f"- {item}")
+
+    if summary.get("proximos_passos"):
+        lines.append("")
+        lines.append("Próximos passos:")
+        for item in summary.get("proximos_passos", []):
+            lines.append(f"- {item}")
+
+    if cnis:
+        lines.append("")
+        lines.append("Resumo CNIS:")
+        lines.append(cnis.get("resumo_cnis", ""))
+
+    return "\n".join(lines)
+
+
+def build_lead_summary_payload(state, summary: dict, cnis: dict | None = None) -> dict:
+    cnis = cnis or {}
+
+    return {
+        "timestamp": datetime.now().isoformat(),
+        "conversation_id": state.session.conversation_id,
+        "nome": summary.get("nome", ""),
+        "telefone": item_value(state, "telefone", ""),
+        "status": summary.get("status", ""),
+        "score": summary.get("score", ""),
+        "natureza_caso": summary.get("natureza_caso", ""),
+        "nexo_trabalho": summary.get("nexo_trabalho", ""),
+        "tipo_vinculo": summary.get("tipo_vinculo", ""),
+        "data_evento": summary.get("data_evento", ""),
+        "cirurgia": summary.get("houve_cirurgia", ""),
+        "sequela": summary.get("houve_sequela", ""),
+        "reducao_capacidade": summary.get("reducao_capacidade", ""),
+        "resumo_final": build_final_summary_text(summary, cnis),
+        "cnis_nome": cnis.get("nome", ""),
+        "cnis_cpf": cnis.get("cpf", ""),
+        "cnis_vinculos": cnis.get("total_vinculos", ""),
+        "cnis_beneficios": cnis.get("total_beneficios", ""),
+        "cnis_resumo": cnis.get("resumo_cnis", ""),
+        "cnis_pontos_atencao": "\n".join(cnis.get("pontos_atencao", [])),
+    }
+
 def render_chat_message(role: str, content: str):
     safe_content = html.escape(content).replace("\n", "<br>")
 
@@ -288,6 +361,9 @@ if "cnis_analysis" not in st.session_state:
 
 if "cnis_summary" not in st.session_state:
     st.session_state.cnis_summary = None
+
+if "lead_summary_saved" not in st.session_state:
+    st.session_state.lead_summary_saved = False
 
 
 st.title(
@@ -445,6 +521,24 @@ with col_chat:
                     st.session_state.cnis_analysis = cnis_analysis
                     st.session_state.cnis_summary = cnis_summary
 
+                    state_after_cnis = get_current_state()
+
+                    summary_after_cnis = generate_case_summary(
+                        state_after_cnis
+                    )
+
+                    lead_payload = build_lead_summary_payload(
+                        state_after_cnis,
+                        summary_after_cnis,
+                        cnis_summary
+                    )
+
+                    save_lead_summary_to_google_sheets(
+                        lead_payload
+                    )
+
+                    st.session_state.lead_summary_saved = True
+
                 st.session_state.messages.append({
                     "role": "assistant",
                     "content": (
@@ -577,9 +671,33 @@ with col_chat:
             "next_question": response["planner"].get("next_question_text"),
         }
 
+        # RAW LOGS (granular)
         save_interaction(payload)
         save_interaction_to_google_sheets(payload)
+
         state_after = st.session_state.engine.get_state()
+
+        # NOVO BLOCO — salvar lead_summary se for desqualificado
+        if (
+            state_after.classification.commercial_status == "desqualificado"
+            and not st.session_state.lead_summary_saved
+        ):
+
+            summary = generate_case_summary(
+                state_after
+            )
+
+            lead_payload = build_lead_summary_payload(
+                state_after,
+                summary,
+                None
+            )
+
+            save_lead_summary_to_google_sheets(
+                lead_payload
+            )
+
+            st.session_state.lead_summary_saved = True
 
         st.session_state.debug_score_after_process = (
             state_after.classification.score_total
